@@ -74,22 +74,11 @@ resource "ciphertrust_gcp_connection" "gcp_connection" {
 				),
 			},
 
-			// Step 3: Attempt to rename — must fail at plan time with a clear error.
-			{
-				Config: providerConfig + fmt.Sprintf(`
-resource "ciphertrust_gcp_connection" "gcp_connection" {
-  name     = "test-gcp-connection-renamed"
-  key_file = <<-EOT
-    %s
-  EOT
-}
-`, gcpKeyFile),
-				ExpectError: regexp.MustCompile(`(?i)immutable|cannot be changed|cannot update`),
-				PlanOnly:    true,
-			},
-
-			// Step 4: Attempt to set cloud_name to an unsupported value — must
-			// fail at plan time. cloud_name only supports "gcp".
+			// Step 3: Attempt to set cloud_name to an unsupported value — must
+			// fail at plan time. cloud_name only supports "gcp". This must NOT
+			// be the last step: the OneOf validator runs on every operation
+			// (including the post-test destroy's plan), so leaving an invalid
+			// cloud_name as the final on-disk config breaks cleanup.
 			{
 				Config: providerConfig + fmt.Sprintf(`
 resource "ciphertrust_gcp_connection" "gcp_connection" {
@@ -101,6 +90,22 @@ resource "ciphertrust_gcp_connection" "gcp_connection" {
 }
 `, name, gcpKeyFile),
 				ExpectError: regexp.MustCompile(`(?i)value must be one of`),
+				PlanOnly:    true,
+			},
+
+			// Step 4: Attempt to rename — must fail at plan time with a clear
+			// error. Kept last: the immutable-name plan modifier only fires on
+			// updates, so it doesn't interfere with the post-test destroy.
+			{
+				Config: providerConfig + fmt.Sprintf(`
+resource "ciphertrust_gcp_connection" "gcp_connection" {
+  name     = "test-gcp-connection-renamed"
+  key_file = <<-EOT
+    %s
+  EOT
+}
+`, gcpKeyFile),
+				ExpectError: regexp.MustCompile(`(?i)immutable|cannot be changed|cannot update`),
 				PlanOnly:    true,
 			},
 		},
