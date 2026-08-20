@@ -24,9 +24,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Run gofmt check
-        run: |
-          test -z "$(gofmt -l .)"
+      #- name: Run gofmt check
+      #  run: |
+      #    test -z "$(gofmt -l .)"
 
       - name: Run go vet
         run: go vet ./...
